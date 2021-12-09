@@ -5,27 +5,56 @@ import path from "path"
 import { fileURLToPath } from "url"
 import { connectDb } from "./db.js"
 import { registerUser } from "./accounts/register.js"
+import { authorizeUser } from "./accounts/authorize.js"
+import { logUserIn } from "./accounts/logUserIn.js"
 import jwt from "jsonwebtoken"
 app.use(express.json())
 
-const users = [
-  {
-    id: "1",
-    username: "john",
-    password: "John0908",
-    isAdmin: true,
-  },
-  {
-    id: "2",
-    username: "jane",
-    password: "Jane0908",
-    isAdmin: false,
-  },
-]
+const CONNECTED_APP_SECRET = process.env.CONNECTED_APP_SECRET_VALUE
 
 async function startApp() {
   try {
-    let refreshTokens = []
+    const generateRefreshToken = (userId) => {
+      return jwt.sign({ id: userId }, "myRefreshSecretKey")
+    }
+
+    app.post("/api/signup", async (req, res) => {
+      try {
+        // Return the newly created userId
+        const userId = await registerUser(req.body.email, req.body.password)
+        // Log the new user in
+        const { accessToken } = await logUserIn(userId, req, res)
+        const refreshToken = generateRefreshToken(userId)
+        res.json({
+          userId,
+          accessToken,
+          refreshToken,
+        })
+      } catch (e) {
+        console.error(e)
+      }
+    })
+
+    app.post("/api/login", async (req, res) => {
+      try {
+        const { isAuthorized, userId } = await authorizeUser(
+          req.body.email,
+          req.body.password
+        )
+        if (isAuthorized) {
+          const { accessToken } = await logUserIn(userId, req, res)
+          const refreshToken = generateRefreshToken(userId)
+          res.json({
+            userId,
+            accessToken,
+            refreshToken,
+          })
+        }
+      } catch (e) {
+        console.error(e)
+        res.status(400).json("Username or password incorrect!")
+      }
+    })
 
     app.post("/api/refresh", (req, res) => {
       //take the refresh token from the user
@@ -55,47 +84,12 @@ async function startApp() {
       //if everything is ok, create new access token, refresh token and send to user
     })
 
-    const generateAccessToken = (user) => {
-      return jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "mySecretKey", {
-        expiresIn: "15m",
-      })
-    }
-
-    const generateRefreshToken = (user) => {
-      return jwt.sign(
-        { id: user.id, isAdmin: user.isAdmin },
-        "myRefreshSecretKey"
-      )
-    }
-
-    app.post("/api/login", (req, res) => {
-      const { username, password } = req.body
-      registerUser("server@server.com", "youtube")
-      const user = users.find((u) => {
-        return u.username === username && u.password === password
-      })
-      if (user) {
-        //Generate an access token
-        const accessToken = generateAccessToken(user)
-        const refreshToken = generateRefreshToken(user)
-        refreshTokens.push(refreshToken)
-        res.json({
-          username: user.username,
-          isAdmin: user.isAdmin,
-          accessToken,
-          refreshToken,
-        })
-      } else {
-        res.status(400).json("Username or password incorrect!")
-      }
-    })
-
     const verify = (req, res, next) => {
       const authHeader = req.headers.authorization
       if (authHeader) {
         const token = authHeader.split(" ")[1]
 
-        jwt.verify(token, "mySecretKey", (err, user) => {
+        jwt.verify(token, CONNECTED_APP_SECRET, (err, user) => {
           if (err) {
             return res.status(403).json("Token is not valid!")
           }
@@ -108,17 +102,8 @@ async function startApp() {
       }
     }
 
-    app.delete("/api/users/:userId", verify, (req, res) => {
-      if (req.user.id === req.params.userId || req.user.isAdmin) {
-        res.status(200).json("User has been deleted.")
-      } else {
-        res.status(403).json("You are not allowed to delete this user!")
-      }
-    })
-
     app.post("/api/logout", verify, (req, res) => {
-      const refreshToken = req.body.token
-      refreshTokens = refreshTokens.filter((token) => token !== refreshToken)
+      res.clearCookie("accessToken")
       res.status(200).json("You logged out successfully.")
     })
 
