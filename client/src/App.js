@@ -1,6 +1,8 @@
 import "./App.css"
 import axios from "axios"
 import { useState } from "react"
+import Login from "./components/Login"
+import SignUp from "./components/SignUp"
 // import jwt_decode from "jwt-decode"
 
 function App() {
@@ -42,18 +44,6 @@ function App() {
   //   }
   // )
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      const res = await axios.post("/login", { email, password })
-      console.log(res.data)
-      setUser(res.data.userId)
-      setAccessToken(res.data.accessToken)
-    } catch (err) {
-      console.log(err)
-    }
-  }
-
   const handleLogout = async (e) => {
     e.preventDefault()
     try {
@@ -82,28 +72,28 @@ function App() {
             height="600px"
             token={accessToken}
           ></tableau-viz>
-          <button type="submit" className="logoutButton" onClick={handleLogout}>
+          <button className="logoutButton" onClick={handleLogout}>
             Logout
           </button>
         </div>
       ) : (
-        <div className="login">
-          <form onSubmit={handleSubmit}>
-            <span className="formTitle">Lama Login</span>
-            <input
-              type="text"
-              placeholder="email"
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <input
-              type="password"
-              placeholder="password"
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button type="submit" className="submitButton">
-              Login
-            </button>
-          </form>
+        <div className="form-wrapper">
+          <SignUp
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            setUser={setUser}
+            setAccessToken={setAccessToken}
+          />
+          <Login
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            setUser={setUser}
+            setAccessToken={setAccessToken}
+          />
         </div>
       )}
     </div>
