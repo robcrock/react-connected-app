@@ -86,6 +86,7 @@ async function startApp() {
 
     const verify = (req, res, next) => {
       const authHeader = req.headers.authorization
+      console.log("AUTH HEADER ", authHeader)
       if (authHeader) {
         const token = authHeader.split(" ")[1]
 

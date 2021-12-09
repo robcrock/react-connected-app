@@ -1,7 +1,7 @@
 import "./App.css"
 import axios from "axios"
 import { useState } from "react"
-import jwt_decode from "jwt-decode"
+// import jwt_decode from "jwt-decode"
 
 function App() {
   const [user, setUser] = useState(null)
@@ -11,61 +11,63 @@ function App() {
   // const [error, setError] = useState(false)
   // const [success, setSuccess] = useState(false)
 
-  const refreshToken = async () => {
-    try {
-      const res = await axios.post("/refresh", { token: user.refreshToken })
-      setUser({
-        ...user,
-        accessToken: res.data.accessToken,
-        refreshToken: res.data.refreshToken,
-      })
-      return res.data
-    } catch (err) {
-      console.log(err)
-    }
-  }
+  // const refreshToken = async () => {
+  //   try {
+  //     const res = await axios.post("/refresh", { token: user.refreshToken })
+  //     setUser({
+  //       ...user,
+  //       accessToken: res.data.accessToken,
+  //       refreshToken: res.data.refreshToken,
+  //     })
+  //     return res.data
+  //   } catch (err) {
+  //     console.log(err)
+  //   }
+  // }
 
-  const axiosJWT = axios.create()
+  // const axiosJWT = axios.create()
 
-  axiosJWT.interceptors.request.use(
-    async (config) => {
-      let currentDate = new Date()
-      const decodedToken = jwt_decode(user.accessToken)
-      if (decodedToken.exp * 1000 < currentDate.getTime()) {
-        const data = await refreshToken()
-        config.headers["authorization"] = "Bearer " + data.accessToken
-      }
-      return config
-    },
-    (error) => {
-      return Promise.reject(error)
-    }
-  )
+  // axiosJWT.interceptors.request.use(
+  //   async (config) => {
+  //     let currentDate = new Date()
+  //     const decodedToken = jwt_decode(user.accessToken)
+  //     if (decodedToken.exp * 1000 < currentDate.getTime()) {
+  //       const data = await refreshToken()
+  //       config.headers["authorization"] = "Bearer " + data.accessToken
+  //     }
+  //     return config
+  //   },
+  //   (error) => {
+  //     return Promise.reject(error)
+  //   }
+  // )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
       const res = await axios.post("/login", { email, password })
       console.log(res.data)
-      setUser(res.data)
+      setUser(res.data.userId)
       setAccessToken(res.data.accessToken)
     } catch (err) {
       console.log(err)
     }
   }
 
-  // const handleDelete = async (id) => {
-  //   setSuccess(false)
-  //   setError(false)
-  //   try {
-  //     await axiosJWT.delete("/users/" + id, {
-  //       headers: { authorization: "Bearer " + user.accessToken },
-  //     })
-  //     setSuccess(true)
-  //   } catch (err) {
-  //     setError(true)
-  //   }
-  // }
+  const handleLogout = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await axios.post(
+        "/logout",
+        {},
+        { headers: { authorization: `Bearer ${accessToken}` } }
+      )
+      setUser("")
+      console.log(res.data)
+    } catch (err) {
+      console.log(err)
+    }
+  }
 
   return (
     <div className="container">
@@ -80,16 +82,9 @@ function App() {
             height="600px"
             token={accessToken}
           ></tableau-viz>
-          {/* {error && (
-            <span className="error">
-              You are not allowed to delete this user!
-            </span>
-          )}
-          {success && (
-            <span className="success">
-              User has been deleted successfully...
-            </span>
-          )} */}
+          <button type="submit" className="logoutButton" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       ) : (
         <div className="login">
